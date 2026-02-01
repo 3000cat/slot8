@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>星星國拉霸機</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Bungee&family=Noto+Sans+TC:wght@700;900&display=swap');
+
+        /* 全域盒子模型修正 */
+        *, *::before, *::after {
+            box-sizing: border-box;
+        }
+
+        :root {
+            --machine-silver: linear-gradient(145deg, #e6e6e6, #999999);
+            --gold-shine: linear-gradient(to right, #bf953f, #fcf6ba, #b38728, #fbf5b7, #aa771c);
+            --ruby-glow: radial-gradient(circle at 30% 30%, #ff5555 0%, #cc0000 50%, #660000 100%);
+            --reel-height: 80px;
+        }
+
+        @media (min-height: 700px) {
+            :root { --reel-height: 105px; }
+        }
+
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #1a0f0a;
+        }
+
+        body {
+            background-image: radial-gradient(#3a2216 1px, transparent 1px);
+            background-size: 30px 30px;
+            font-family: 'Noto Sans TC', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding: 1.5vh 10px;
+        }
+
+        /* 機台震動動畫 */
+        @keyframes machine-shake {
+            0% { transform: translate(0, 0); }
+            10% { transform: translate(-2px, -2px); }
+            20% { transform: translate(2px, 2px); }
+            30% { transform: translate(-2px, 1px); }
+            100% { transform: translate(0, 0); }
+        }
+
+        /* 標題文字閃爍動畫 */
+        @keyframes title-blink {
+            0%, 100% { opacity: 1; filter: brightness(1.2) drop-shadow(0 0 15px rgba(251, 191, 36, 0.9)); }
+            50% { opacity: 0.3; filter: brightness(0.5); }
+        }
+
+        .title-flashing {
+            animation: title-blink 0.15s steps(2, start) infinite;
+        }
+
+        .shaking { animation: machine-shake 0.3s ease-in-out; }
+
+        /* 機器主體 */
+        .slot-machine {
+            background: var(--machine-silver);
+            border: 6px solid #555;
+            border-radius: 25px;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.8), inset 0 2px 5px white;
+            position: relative;
+            width: 100%;
+            max-width: 360px;
+            max-height: 78vh; 
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+            padding-bottom: 8px; 
+        }
+
+        @media (min-width: 640px) {
+            .slot-machine { max-width: 420px; border-width: 10px; }
+        }
+
+        /* 標題板 */
+        .machine-top {
+            background: #000;
+            height: 75px; 
+            margin: 8px 8px 4px 8px;
+            border: 4px solid #b38728;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 12px;
+            position: relative;
+            overflow: hidden;
+            flex-shrink: 0;
+            box-shadow: inset 0 0 15px rgba(179, 135, 40, 0.5);
+        }
+
+        .title-text {
+            font-weight: 900;
+            background: var(--gold-shine);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-size: 2.1rem;
+            letter-spacing: 4px;
+            z-index: 2;
+            text-align: center;
+            line-height: 1;
+        }
+
+        /* 捲軸視窗 */
+        .reels-window {
+            background: #000;
+            margin: 5px 15px;
+            padding: 10px;
+            border: 5px inset #444;
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            position: relative;
+            border-radius: 10px;
+            box-shadow: inset 0 15px 30px rgba(0,0,0,1), inset 0 -15px 30px rgba(0,0,0,1);
+        }
+
+        .reel-container {
+            height: var(--reel-height);
+            width: 75px;
+            overflow: hidden;
+            background: #fff;
+            border-radius: 6px;
+            position: relative;
+        }
+
+        @media (min-width: 640px) { .reel-container { width: 100px; } }
+
+        .reel-strip { transition: transform 3.8s cubic-bezier(0.1, 0, 0, 1.1); will-change: transform, filter; }
+        .spinning-blur { filter: blur(4px); transform: scaleX(0.95); }
+
+        .digit {
+            height: var(--reel-height);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 60px;
+            font-weight: 900;
+            color: #111;
+            font-family: 'Share Tech Mono', monospace;
+        }
+
+        .glass-reflection {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: linear-gradient(135deg, rgba(255,255,255,0.2) 0%, transparent 45%, rgba(0,0,0,0.1) 100%);
+            pointer-events: none;
+            z-index: 20;
+        }
+
+        /* 豪華拉柄 */
+        .lever-container {
+            position: absolute;
+            right: -45px;
+            top: 100px;
+            width: 45px;
+            height: 180px;
+            touch-action: manipulation;
+        }
+
+        .lever-base {
+            width: 20px;
+            height: 40px;
+            background: var(--gold-shine);
+            border: 2px solid #664400;
+            border-radius: 0 15px 15px 0;
+            position: absolute;
+            left: 0; top: 80px;
+        }
+
+        .lever-arm {
+            width: 10px;
+            height: 100px;
+            background: var(--gold-shine);
+            position: absolute;
+            left: 6px;
+            bottom: 75px;
+            transform-origin: bottom center;
+            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: 8px;
+        }
+
+        .lever-ball {
+            width: 42px;
+            height: 42px;
+            background: var(--ruby-glow);
+            border-radius: 50%;
+            position: absolute;
+            top: -38px;
+            left: -16px;
+            cursor: pointer;
+            box-shadow: 0 8px 15px rgba(0,0,0,0.6);
+            border: 2px solid #400;
+        }
+
+        .lever-arm.pulling { transform: rotateX(75deg) scaleY(0.3); }
+
+        /* 底部控制欄容器 */
+        .bottom-control-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 16px;
+            margin-top: 4px;
+            width: 100%;
+            flex-shrink: 0;
+        }
+
+        .info-panel {
+            background: #0a0a0a;
+            margin: 5px 15px;
+            padding: 8px;
+            border: 2px solid #b38728;
+            border-radius: 10px;
+            color: #fbbf24;
+            text-align: center;
+            font-size: 0.9rem;
+            min-height: 42px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 900;
+            box-shadow: inset 0 0 10px rgba(179, 135, 40, 0.3);
+        }
+
+        .reset-btn {
+            background: #111;
+            border: 2px solid #b38728;
+            color: #b38728;
+            font-weight: 900;
+            padding: 6px 12px;
+            min-width: 110px;
+            border-radius: 10px;
+            font-size: 0.85rem;
+            box-shadow: 0 3px 0 #333;
+            transition: all 0.1s;
+            white-space: nowrap;
+        }
+
+        .reset-btn:active { 
+            transform: translateY(2px); 
+            box-shadow: 0 1px 0 #333; 
+        }
+
+        /* 歷史紀錄區 */
+        .history-panel {
+            width: 100%;
+            max-width: 360px;
+            background: rgba(10, 10, 10, 0.85);
+            border: 2px solid rgba(179, 135, 40, 0.3);
+            padding: 10px 12px;
+            border-radius: 15px;
+            flex-grow: 1; 
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            max-height: 20vh; 
+            margin-top: 10px;
+        }
+
+        @media (min-width: 1024px) {
+            body { justify-content: center; padding: 20px; }
+            .history-panel {
+                width: 220px;
+                height: 520px; 
+                margin-top: 0;
+                margin-left: 60px;
+                max-height: 85vh;
+            }
+            .slot-machine { max-height: 85vh; }
+        }
+
+        .history-item {
+            background: rgba(179, 135, 40, 0.15);
+            border: 1px solid #b38728;
+            color: #fbbf24;
+            padding: 2px 8px;
+            border-radius: 5px;
+            font-family: 'Share Tech Mono', monospace;
+            font-weight: bold;
+            font-size: 1.1rem;
+            animation: popIn 0.3s ease-out;
+        }
+
+        @keyframes popIn { 0% { transform: scale(0.5); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+
+        /* 中獎彈窗 */
+        #toast {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0);
+            background: #fff;
+            color: #d90000;
+            padding: 15px;
+            width: 85%; 
+            max-width: 380px;
+            max-height: 85vh;
+            aspect-ratio: 1 / 1.1; 
+            border-radius: 30px;
+            border: 10px solid #1a1a1a;
+            box-shadow: 0 0 0 8px #b38728, 0 40px 100px rgba(0,0,0,1);
+            z-index: 1000;
+            transition: transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.4);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .toast-title {
+            font-size: 1.6rem;
+            font-weight: 900;
+            color: #1a202c;
+            margin-bottom: 5px;
+            letter-spacing: 4px;
+        }
+
+        #toastNumber {
+            font-family: 'Noto Sans TC', sans-serif;
+            font-size: 42vw; 
+            font-weight: 900;
+            display: block;
+            line-height: 0.85;
+            margin: 0;
+            text-shadow: 0 4px 0 #ccc, 0 15px 30px rgba(0,0,0,0.2);
+            text-align: center;
+        }
+
+        @media (min-width: 640px) { #toastNumber { font-size: 18rem; } }
+
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #b38728; border-radius: 10px; }
+
+        input { touch-action: manipulation; font-size: 16px !important; }
+        ::placeholder { font-size: 11px; color: #555; }
+    </style>
+</head>
+<body class="lg:flex-row">
+
+    <!-- 機台容器 -->
+    <div id="machineBody" class="slot-machine">
+        <div class="machine-top">
+            <div id="topLights" class="absolute inset-0 opacity-10 bg-yellow-500"></div>
+            <div id="mainTitle" class="title-text">星星國拉霸機</div>
+        </div>
+
+        <!-- 範圍設定區 -->
+        <div class="px-5 py-1.5 space-y-1.5 relative z-10">
+            <div class="grid grid-cols-2 gap-3">
+                <div class="text-center">
+                    <span class="text-[9px] font-black text-gray-800 block tracking-widest uppercase">起始號碼</span>
+                    <input type="number" id="minRange" value="1" class="w-full bg-black text-yellow-500 border-2 border-yellow-900/50 text-center py-1 font-black rounded-lg shadow-inner outline-none">
+                </div>
+                <div class="text-center">
+                    <span class="text-[9px] font-black text-gray-800 block tracking-widest uppercase">結束號碼</span>
+                    <input type="number" id="maxRange" value="30" class="w-full bg-black text-yellow-500 border-2 border-yellow-900/50 text-center py-1 font-black rounded-lg shadow-inner outline-none">
+                </div>
+            </div>
+            <div class="text-center">
+                <span class="text-[9px] font-black text-gray-800 block tracking-widest uppercase">排除號碼</span>
+                <input type="text" id="excludeInput" placeholder="例如: 5, 12" class="w-full bg-black text-red-500 border-2 border-red-900/30 text-center py-1 font-bold rounded-lg shadow-inner outline-none">
+            </div>
+        </div>
+
+        <!-- 滾輪視窗區 -->
+        <div class="reels-window">
+            <div class="glass-reflection"></div>
+            <div class="reel-container">
+                <div id="reel-tens" class="reel-strip"><div class="digit">0</div></div>
+            </div>
+            <div class="reel-container">
+                <div id="reel-ones" class="reel-strip"><div class="digit">0</div></div>
+            </div>
+        </div>
+
+        <!-- 狀態面板 -->
+        <div class="info-panel">
+            <div id="statusText"></div> 
+        </div>
+
+        <!-- 底部控制底欄 -->
+        <div class="bottom-control-bar">
+            <div class="flex gap-2 ml-1">
+                <div class="w-2 h-2 rounded-full bg-red-600 shadow-[0_0_5px_red]"></div>
+                <div class="w-2 h-2 rounded-full bg-yellow-600 shadow-[0_0_8px_yellow]"></div>
+                <div class="w-2 h-2 rounded-full bg-green-600 shadow-[0_0_5px_green]"></div>
+            </div>
+            <button id="resetBtn" class="reset-btn">重置設定</button>
+        </div>
+
+        <!-- 豪華拉桿 -->
+        <div class="lever-container" id="leverTrigger">
+            <div class="lever-base"></div>
+            <div id="leverArm" class="lever-arm">
+                <div id="leverBall" class="lever-ball"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 紀錄區 -->
+    <div class="history-panel">
+        <h3 class="text-[#b38728] font-black border-b border-yellow-900/30 pb-1 mb-2 flex justify-between items-center text-sm tracking-widest">
+            <span>抽過號碼</span>
+            <button id="clearBtn" class="text-[16px] font-black bg-red-950/40 border border-red-900/60 px-3 py-0.5 rounded text-red-200 active:scale-95">清空</button>
+        </h3>
+        <div id="historyList" class="overflow-y-auto flex-grow flex flex-wrap gap-1.5 content-start pr-1 custom-scrollbar">
+            <div class="w-full text-gray-700 italic text-[10px] text-center mt-2">等待開獎...</div>
+        </div>
+    </div>
+
+    <!-- 中獎彈窗 -->
+    <div id="toast">
+        <span class="toast-title">恭喜中獎</span>
+        <span id="toastNumber">00</span>
+    </div>
+
+    <script>
+        const AudioEngine = (() => {
+            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const playTone = (freq, type, duration, volume = 0.1, delay = 0) => {
+                const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
+                osc.type = type; osc.frequency.setValueAtTime(freq, audioCtx.currentTime + delay);
+                gain.gain.setValueAtTime(volume, audioCtx.currentTime + delay);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + delay + duration);
+                osc.connect(gain); gain.connect(audioCtx.destination);
+                osc.start(audioCtx.currentTime + delay); osc.stop(audioCtx.currentTime + delay + duration);
+            };
+            return {
+                pull: () => { playTone(200, 'square', 0.1, 0.4); playTone(100, 'square', 0.2, 0.3, 0.05); },
+                spin: () => playTone(Math.random() * 80 + 350, 'triangle', 0.06, 0.22),
+                stop: () => playTone(180, 'square', 0.15, 0.25),
+                win: () => {
+                    const freq = [261.63, 329.63, 392.00, 523.25];
+                    playTone(60, 'sine', 1.2, 0.6);
+                    freq.forEach((f, i) => { playTone(f * 2, 'triangle', 0.8, 0.2, i * 0.05); });
+                    setTimeout(() => { freq.forEach(f => playTone(f, 'triangle', 2.0, 0.25)); }, 250);
+                },
+                resume: () => { if(audioCtx.state === 'suspended') audioCtx.resume(); }
+            };
+        })();
+
+        const minInput = document.getElementById('minRange');
+        const maxInput = document.getElementById('maxRange');
+        const excludeInput = document.getElementById('excludeInput');
+        const mainTitle = document.getElementById('mainTitle');
+        const leverArm = document.getElementById('leverArm');
+        const reelTens = document.getElementById('reel-tens');
+        const reelOnes = document.getElementById('reel-ones');
+        const historyList = document.getElementById('historyList');
+        const statusText = document.getElementById('statusText');
+        const toast = document.getElementById('toast');
+        const toastNumber = document.getElementById('toastNumber');
+
+        let isSpinning = false;
+        const getReelHeight = () => parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--reel-height'));
+
+        function initReels() { createStrip(reelTens); createStrip(reelOnes); }
+        function createStrip(element) {
+            element.innerHTML = ''; const digits = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+            const content = Array(12).fill(digits).flat();
+            content.forEach(num => {
+                const div = document.createElement('div'); div.className = 'digit';
+                div.textContent = num; element.appendChild(div);
+            });
+        }
+
+        function startSpin() {
+            if (isSpinning) return;
+            const min = parseInt(minInput.value); const max = parseInt(maxInput.value);
+            const excludedStr = excludeInput.value; const h = getReelHeight();
+            const excludedArray = excludedStr.split(/[ ,，]+/).map(s => parseInt(s.trim())).filter(n => !isNaN(n));
+            const pool = []; for (let i = min; i <= max; i++) if (!excludedArray.includes(i)) pool.push(i);
+
+            if (pool.length === 0) { statusText.textContent = "無可用號碼！"; statusText.style.color = "#ff4444"; return; }
+
+            isSpinning = true; statusText.textContent = "祝您中獎..."; statusText.style.color = "#fbbf24";
+            mainTitle.classList.add('title-flashing');
+            reelTens.classList.add('spinning-blur'); reelOnes.classList.add('spinning-blur');
+
+            const result = pool[Math.floor(Math.random() * pool.length)];
+            const tens = Math.floor(result / 10); const ones = result % 10;
+            const tensOffset = (100 + tens) * h; const onesOffset = (100 + ones) * h;
+
+            reelTens.style.transform = `translateY(-${tensOffset}px)`;
+            reelOnes.style.transform = `translateY(-${onesOffset}px)`;
+
+            const soundInt = setInterval(() => { if(isSpinning) AudioEngine.spin(); else clearInterval(soundInt); }, 85);
+
+            setTimeout(() => {
+                clearInterval(soundInt);
+                mainTitle.classList.remove('title-flashing');
+                reelTens.classList.remove('spinning-blur'); reelOnes.classList.remove('spinning-blur');
+                AudioEngine.stop();
+                document.getElementById('machineBody').classList.add('shaking');
+                setTimeout(() => document.getElementById('machineBody').classList.remove('shaking'), 500);
+
+                isSpinning = false; statusText.textContent = "幸運座號： " + result;
+                showResult(result); addToHistory(result);
+
+                setTimeout(() => {
+                    reelTens.style.transition = 'none'; reelOnes.style.transition = 'none';
+                    reelTens.style.transform = `translateY(-${tens * h}px)`;
+                    reelOnes.style.transform = `translateY(-${ones * h}px)`;
+                    reelTens.offsetHeight; 
+                    setTimeout(() => {
+                        reelTens.style.transition = 'transform 3.8s cubic-bezier(0.1, 0, 0, 1.1)';
+                        reelOnes.style.transition = 'transform 3.8s cubic-bezier(0.1, 0, 0, 1.1)';
+                    }, 50);
+                }, 600);
+            }, 3800);
+        }
+
+        function handlePull(e) {
+            if(e.cancelable) e.preventDefault();
+            if (isSpinning) return;
+            AudioEngine.resume(); AudioEngine.pull();
+            leverArm.classList.add('pulling');
+            setTimeout(() => { leverArm.classList.remove('pulling'); startSpin(); }, 450);
+        }
+
+        function showResult(num) {
+            toastNumber.textContent = num < 10 ? '0' + num : num;
+            toast.style.transform = 'translate(-50%, -50%) scale(1)';
+            AudioEngine.win();
+            // 修改停留時間：從 1500ms 改為 1700ms
+            setTimeout(() => { toast.style.transform = 'translate(-50%, -50%) scale(0)'; }, 1700);
+        }
+
+        function addToHistory(num) {
+            if (historyList.innerHTML.includes('等待開獎')) historyList.innerHTML = '';
+            const displayNum = num < 10 ? '0' + num : num;
+            const item = document.createElement('div'); item.className = 'history-item';
+            item.textContent = displayNum; historyList.prepend(item);
+        }
+
+        document.getElementById('clearBtn').onclick = () => {
+            AudioEngine.resume();
+            historyList.innerHTML = '<div class="w-full text-gray-700 italic text-[10px] text-center mt-2">等待開獎...</div>';
+            statusText.textContent = "";
+        };
+
+        document.getElementById('resetBtn').onclick = () => {
+            AudioEngine.resume();
+            if (isSpinning) return;
+            minInput.value = 1; maxInput.value = 30; excludeInput.value = "";
+            statusText.textContent = "已重置並歸零。";
+            historyList.innerHTML = '<div class="w-full text-gray-700 italic text-[10px] text-center mt-2">等待開獎...</div>';
+            reelTens.style.transition = 'none'; reelOnes.style.transition = 'none';
+            reelTens.style.transform = 'translateY(0)'; reelOnes.style.transform = 'translateY(0)';
+            reelTens.offsetHeight; 
+            setTimeout(() => {
+                reelTens.style.transition = 'transform 3.8s cubic-bezier(0.1, 0, 0, 1.1)';
+                reelOnes.style.transition = 'transform 3.8s cubic-bezier(0.1, 0, 0, 1.1)';
+            }, 50);
+        };
+
+        const trigger = document.getElementById('leverTrigger');
+        trigger.addEventListener('mousedown', handlePull);
+        trigger.addEventListener('touchstart', handlePull, {passive: false});
+        
+        window.addEventListener('resize', () => {
+            initReels(); document.body.style.height = window.innerHeight + 'px';
+        });
+        
+        initReels();
+        document.body.style.height = window.innerHeight + 'px';
+    </script>
+</body>
+</html>
